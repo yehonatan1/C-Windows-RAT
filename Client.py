@@ -1,39 +1,85 @@
-import os
-import socket
-import subprocess
+#include <iostream>
+#include <WS2tcpip.h>
+#include <string>
+#include <inaddr.h>
+
+#pragma comment(lib, "ws2_32.lib")
+
+using namespace std;
 
 
-def file_size(path):
-    return os.path.getsize(path)
+void Client() {
+    string ipAdress = "127.0.0.1"; //IP Address pf the server
+    int port = 7943; //Listtening port # on server
 
 
-def client():
-    s = socket.socket()
-    s.connect(('127.0.0.1', 8965))
+    // Initialize Winsock
 
-    # message = input('-> ')
-    while True:
-        data = s.recv(1024).decode('utf-8')
-        if 'cmd' in data:
-            try:
-                data = data.replace('cmd ', '')
-                s.send(subprocess.check_output(data, shell=True))
-            except Exception:
-                s.send(f"Error with {data} command".encode('utf-8'))
+    WSADATA data;
+    WORD ver = MAKEWORD(2, 2);
+    int wsResualt = WSAStartup(ver, &data);
 
-        elif 'get file' in data:
-            data = data.replace('get file ', '')
-            content = ''
-            with open(data, 'rb') as f:
-                content = f.read()
-                s.sendall(content)
+    if (wsResualt != 0) {
+        cerr << "Cant start Winsock";
+        return;
+    }
+
+    // Create socket
+
+    SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock == INVALID_SOCKET) {
+        cerr << "Cant create socket" << WSAGetLastError << endl;
+        WSACleanup();
+        return;
+    }
+    // Fill in a hint structure
+    sockaddr_in hint;
+    hint.sin_family = AF_INET;
+    hint.sin_port = htons(port);
+    inet_pton(AF_INET, ipAdress.c_str(), &hint.sin_addr);
+
+    // Connect to server
+    int connResult = connect(sock, (sockaddr*)&hint, sizeof(hint));
+    if (connResult == SOCKET_ERROR) {
+        cerr << "Cant connect to server" << WSAGetLastError << endl;
+        closesocket(sock);
+        WSACleanup();
+        return;
+    }
+
+    //Do-while loop to send and receive data
+    char buf[4096];
+    string userInput;
+
+    do {
+        //Prompt the user for some text
+        cout << "> " << endl;
+        getline(cin, userInput);
+
+        //Send the text
+        if (userInput.size() > 0) {
+            int sendResault = send(sock, userInput.c_str(), userInput.size() + 1, 0);
+            if (sendResault != SOCKET_ERROR) {
+                // Wait fir response
+                ZeroMemory(buf, 4096);
+                int bytesRecived = recv(sock, buf, 4096, 0);
+                if (bytesRecived > 0) {
+                    // Echo  response to console
+                    cout << "Server " << string(buf, 0, bytesRecived) << endl;
+                }
+            }
+        }
+
+        //Wait for response
+    } while (userInput.size() > 0);
+
+    // Gracefully close down everything
+    closesocket(sock);
+    WSACleanup();
+}
 
 
-        else:
-            s.send('The command was not found'.encode('utf-8'))
-
-    s.close()
-
-
-if __name__ == '__main__':
-    client()
+int main() {
+    cout << "Hello" << endl;
+    Client();
+}
