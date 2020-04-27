@@ -111,6 +111,7 @@
 import socket
 from _thread import *
 import threading
+import _thread
 
 
 class Server:
@@ -123,10 +124,15 @@ class Server:
         self.ip = ip
         self.listen_count = listen_count
 
-    s = socket.socket()
-    s.bind((ip, port))
-    s.listen(listen_count)
-    server_socket, adress = s.accept()
+    def startListen(self):
+        self.s = socket.socket()
+        self.s.bind((self.ip, self.port))
+        self.s.listen(self.listen_count)
+        self.server_socket, self.adress = self.s.accept()
+
+    def runThread(self):
+        self.startListen()
+        self.server()
 
     def receive_file_from_client(self, auto_saving):
         if auto_saving:
@@ -214,6 +220,10 @@ class Server:
             elif command.startswith("take camera video"):
                 self.receive_file_from_client(False)
 
+            elif command == 'exit':
+                self.server_socket.close()
+                break
+
             else:
                 data = self.server_socket.recv(1024).decode('utf-8')
                 print(data)
@@ -221,4 +231,17 @@ class Server:
         self.server_socket.close()
 
 
-server = Server(7613, "127.0.0.1", 1)
+
+myServer = Server(7613, '127.0.0.1', 1)
+myServer2 = Server(9999, '127.0.0.1', 1)
+
+t1 = threading.Thread(target=myServer.runThread, args=())
+t2 = threading.Thread(target=myServer2.runThread, args=())
+
+
+t1.start()
+t2.start()
+
+
+t1.join()
+t2.join()
